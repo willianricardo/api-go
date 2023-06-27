@@ -16,66 +16,54 @@ func NewOrderRepository(db *sql.DB) *OrderRepository {
 }
 
 func (repository *OrderRepository) GetOrders() ([]model.Order, error) {
-	var orders []model.Order = []model.Order{}
+	ordersMap := make(map[string]model.Order)
+	orderItemsMap := make(map[string][]model.OrderItem)
 
-	orderRows, err := repository.db.Query(`
+	rows, err := repository.db.Query(`
 		SELECT o.id, o.customer_id, o.order_date,
-		       c.id, c.name
+		       c.id, c.name,
+		       oi.id, oi.product_id, oi.quantity, oi.price,
+		       p.id, p.name, p.price
 		FROM orders o
 		INNER JOIN customers c ON o.customer_id = c.id
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer orderRows.Close()
-
-	var customer model.Customer
-
-	for orderRows.Next() {
-		order := model.Order{}
-		err := orderRows.Scan(
-			&order.ID, &order.CustomerID, &order.OrderDate,
-			&customer.ID, &customer.Name,
-		)
-		if err != nil {
-			return nil, err
-		}
-
-		order.Customer = customer
-		order.OrderItems = []model.OrderItem{}
-		orders = append(orders, order)
-	}
-
-	orderItemRows, err := repository.db.Query(`
-		SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price,
-			   p.id, p.name, p.price
-		FROM order_items oi
+		INNER JOIN order_items oi ON oi.order_id = o.id
 		INNER JOIN products p ON oi.product_id = p.id
 	`)
 	if err != nil {
 		return nil, err
 	}
-	defer orderItemRows.Close()
+	defer rows.Close()
 
-	var orderItem model.OrderItem
-	var product model.Product
+	for rows.Next() {
+		order := model.Order{}
+		orderItem := model.OrderItem{}
+		customer := model.Customer{}
+		product := model.Product{}
 
-	for orderItemRows.Next() {
-		err := orderItemRows.Scan(
-			&orderItem.ID, &orderItem.OrderID, &orderItem.ProductID, &orderItem.Quantity, &orderItem.Price,
+		err := rows.Scan(
+			&order.ID, &order.CustomerID, &order.OrderDate,
+			&customer.ID, &customer.Name,
+			&orderItem.ID, &orderItem.ProductID, &orderItem.Quantity, &orderItem.Price,
 			&product.ID, &product.Name, &product.Price,
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		for i := range orders {
-			if orders[i].ID == orderItem.OrderID {
-				orderItem.Product = product
-				orders[i].OrderItems = append(orders[i].OrderItems, orderItem)
-				break
-			}
+		order.Customer = customer
+		orderItem.Product = product
+
+		if _, ok := ordersMap[order.ID]; !ok {
+			ordersMap[order.ID] = order
 		}
+		orderItemsMap[order.ID] = append(orderItemsMap[order.ID], orderItem)
+	}
+
+	orders := make([]model.Order, 0, len(ordersMap))
+
+	for orderID, order := range ordersMap {
+		order.OrderItems = orderItemsMap[orderID]
+		orders = append(orders, order)
 	}
 
 	return orders, nil
@@ -84,42 +72,35 @@ func (repository *OrderRepository) GetOrders() ([]model.Order, error) {
 func (repository *OrderRepository) GetOrderByID(orderID string) (model.Order, error) {
 	var order model.Order
 
-	orderRow := repository.db.QueryRow(`
+	query := `
 		SELECT o.id, o.customer_id, o.order_date,
-			   c.id, c.name
+			   c.id, c.name,
+			   oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price,
+			   p.id, p.name, p.price
 		FROM orders o
 		INNER JOIN customers c ON o.customer_id = c.id
-		WHERE o.id = ?
-	`, orderID)
-
-	customer := model.Customer{}
-	err := orderRow.Scan(
-		&order.ID, &order.CustomerID, &order.OrderDate,
-		&customer.ID, &customer.Name,
-	)
-	if err != nil {
-		return order, err
-	}
-
-	order.Customer = customer
-
-	orderItemRows, err := repository.db.Query(`
-		SELECT oi.id, oi.order_id, oi.product_id, oi.quantity, oi.price,
-			   p.id, p.name, p.price
-		FROM order_items oi
+		INNER JOIN order_items oi ON oi.order_id = o.id
 		INNER JOIN products p ON oi.product_id = p.id
-		WHERE oi.order_id = ?
-	`, orderID)
+		WHERE o.id = ?
+	`
+
+	rows, err := repository.db.Query(query, orderID)
 	if err != nil {
 		return order, err
 	}
-	defer orderItemRows.Close()
+	defer rows.Close()
 
-	var orderItem model.OrderItem
-	var product model.Product
+	orderItems := make([]model.OrderItem, 0)
+	var customer model.Customer
+	foundRows := false
 
-	for orderItemRows.Next() {
-		err := orderItemRows.Scan(
+	for rows.Next() {
+		orderItem := model.OrderItem{}
+		product := model.Product{}
+
+		err := rows.Scan(
+			&order.ID, &order.CustomerID, &order.OrderDate,
+			&customer.ID, &customer.Name,
 			&orderItem.ID, &orderItem.OrderID, &orderItem.ProductID, &orderItem.Quantity, &orderItem.Price,
 			&product.ID, &product.Name, &product.Price,
 		)
@@ -127,9 +108,17 @@ func (repository *OrderRepository) GetOrderByID(orderID string) (model.Order, er
 			return order, err
 		}
 
+		order.Customer = customer
 		orderItem.Product = product
-		order.OrderItems = append(order.OrderItems, orderItem)
+		orderItems = append(orderItems, orderItem)
+		foundRows = true
 	}
+
+	if !foundRows {
+		return order, sql.ErrNoRows
+	}
+
+	order.OrderItems = orderItems
 
 	return order, nil
 }
