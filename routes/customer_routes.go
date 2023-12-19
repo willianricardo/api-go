@@ -3,14 +3,14 @@ package routes
 import (
 	"api/handler"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
-func SetupCustomerRoutes(r *gin.Engine, customerHandler *handler.CustomerHandler) {
-	router := r.Group("/customers")
-	router.GET("", customerHandler.GetCustomers)
-	router.GET("/:id", customerHandler.GetCustomerByID)
-	router.POST("", customerHandler.CreateCustomer)
-	router.PUT("/:id", customerHandler.UpdateCustomer)
-	router.DELETE("/:id", customerHandler.DeleteCustomer)
+func SetupCustomerRoutes(c *fiber.App, customerHandler *handler.CustomerHandler) {
+	router := c.Group("/customers")
+	router.Get("", customerHandler.GetCustomers)
+	router.Get("/:id", customerHandler.GetCustomerByID)
+	router.Post("", customerHandler.CreateCustomer)
+	router.Put("/:id", customerHandler.UpdateCustomer)
+	router.Delete("/:id", customerHandler.DeleteCustomer)
 }

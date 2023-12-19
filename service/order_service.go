@@ -1,15 +1,15 @@
 package service
 
 import (
-	"api/model"
+	"api/entity"
 	"api/repository"
 )
 
 type OrderService interface {
-	GetOrders() ([]model.Order, error)
-	GetOrderByID(orderID string) (model.Order, error)
-	CreateOrder(order model.Order) error
-	UpdateOrder(order model.Order) error
+	GetOrders() ([]entity.Order, error)
+	GetOrderByID(orderID string) (entity.Order, error)
+	CreateOrder(order entity.Order) error
+	UpdateOrder(order entity.Order) error
 	DeleteOrder(orderID string) error
 }
 
@@ -23,19 +23,19 @@ func NewOrderService(orderRepository *repository.OrderRepository) OrderService {
 	}
 }
 
-func (service *orderService) GetOrders() ([]model.Order, error) {
+func (service *orderService) GetOrders() ([]entity.Order, error) {
 	return service.orderRepository.GetOrders()
 }
 
-func (service *orderService) GetOrderByID(orderID string) (model.Order, error) {
+func (service *orderService) GetOrderByID(orderID string) (entity.Order, error) {
 	return service.orderRepository.GetOrderByID(orderID)
 }
 
-func (service *orderService) CreateOrder(order model.Order) error {
+func (service *orderService) CreateOrder(order entity.Order) error {
 	return service.orderRepository.CreateOrder(order)
 }
 
-func (service *orderService) UpdateOrder(order model.Order) error {
+func (service *orderService) UpdateOrder(order entity.Order) error {
 	return service.orderRepository.UpdateOrder(order)
 }
 

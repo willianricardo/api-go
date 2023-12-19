@@ -1,7 +1,7 @@
 package service
 
 import (
-	"api/model"
+	"api/entity"
 	"api/repository"
 )
 
@@ -15,19 +15,19 @@ func NewCustomerService(customerRepository *repository.CustomerRepository) *Cust
 	}
 }
 
-func (service *CustomerService) GetCustomers() ([]model.Customer, error) {
+func (service *CustomerService) GetCustomers() ([]entity.Customer, error) {
 	return service.customerRepository.GetCustomers()
 }
 
-func (service *CustomerService) GetCustomerByID(id string) (model.Customer, error) {
+func (service *CustomerService) GetCustomerByID(id string) (entity.Customer, error) {
 	return service.customerRepository.GetCustomerByID(id)
 }
 
-func (service *CustomerService) CreateCustomer(customer model.Customer) error {
+func (service *CustomerService) CreateCustomer(customer entity.Customer) error {
 	return service.customerRepository.CreateCustomer(customer)
 }
 
-func (service *CustomerService) UpdateCustomer(customer model.Customer) error {
+func (service *CustomerService) UpdateCustomer(customer entity.Customer) error {
 	return service.customerRepository.UpdateCustomer(customer)
 }
 

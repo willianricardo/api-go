@@ -3,25 +3,35 @@ package database
 import (
 	"database/sql"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	migrate "github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 )
 
 func InitializeDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "database/database.db")
+	db, err := sql.Open("postgres", "host=localhost port=5432 user=postgres password=postgres dbname=vendas sslmode=disable")
 	if err != nil {
 		return nil, err
 	}
 
-	// Run the migrations
-	m, err := migrate.New("file://database/migrations", "sqlite3://database/database.db")
+	err = db.Ping()
 	if err != nil {
 		return nil, err
 	}
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := migrate.NewWithDatabaseInstance("file://database/migrations", "postgres", driver)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.Up()
+	if err != nil && err != migrate.ErrNoChange {
 		return nil, err
 	}
 

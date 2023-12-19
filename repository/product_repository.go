@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"api/model"
+	"api/entity"
 	"database/sql"
 )
 
@@ -15,8 +15,8 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	}
 }
 
-func (repository *ProductRepository) GetProducts() ([]model.Product, error) {
-	var products []model.Product = []model.Product{}
+func (repository *ProductRepository) GetProducts() ([]entity.Product, error) {
+	products := make([]entity.Product, 0)
 	rows, err := repository.db.Query("SELECT id, name, price FROM products")
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func (repository *ProductRepository) GetProducts() ([]model.Product, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var product model.Product
+		var product entity.Product
 		err := rows.Scan(&product.ID, &product.Name, &product.Price)
 		if err != nil {
 			return nil, err
@@ -35,26 +35,34 @@ func (repository *ProductRepository) GetProducts() ([]model.Product, error) {
 	return products, nil
 }
 
-func (repository *ProductRepository) GetProductByID(id string) (model.Product, error) {
-	var product model.Product
-	row := repository.db.QueryRow("SELECT id, name, price FROM products WHERE id = ?", id)
-	err := row.Scan(&product.ID, &product.Name, &product.Price)
+func (repository *ProductRepository) GetProductByID(id string) (entity.Product, error) {
+	rows, err := repository.db.Query("SELECT id, name, price FROM products WHERE id = $1", id)
 	if err != nil {
-		return product, err
+		return entity.Product{}, err
 	}
-	return product, nil
+
+	if rows.Next() {
+		var product entity.Product
+		err := rows.Scan(&product.ID, &product.Name, &product.Price)
+		if err != nil {
+			return entity.Product{}, err
+		}
+		return product, nil
+	}
+
+	return entity.Product{}, nil
 }
 
-func (repository *ProductRepository) CreateProduct(product model.Product) error {
-	_, err := repository.db.Exec("INSERT INTO products (id, name, price) VALUES (?, ?, ?)", product.ID, product.Name, product.Price)
+func (repository *ProductRepository) CreateProduct(product entity.Product) error {
+	_, err := repository.db.Exec("INSERT INTO products (id, name, price) VALUES ($1, $2, $3)", product.ID, product.Name, product.Price)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (repository *ProductRepository) UpdateProduct(product model.Product) error {
-	_, err := repository.db.Exec("UPDATE products SET name = ?, price = ? WHERE id = ?", product.Name, product.Price, product.ID)
+func (repository *ProductRepository) UpdateProduct(product entity.Product) error {
+	_, err := repository.db.Exec("UPDATE products SET name = $1, price = $2 WHERE id = $3", product.Name, product.Price, product.ID)
 	if err != nil {
 		return err
 	}
@@ -62,7 +70,7 @@ func (repository *ProductRepository) UpdateProduct(product model.Product) error 
 }
 
 func (repository *ProductRepository) DeleteProduct(id string) error {
-	_, err := repository.db.Exec("DELETE FROM products WHERE id = ?", id)
+	_, err := repository.db.Exec("DELETE FROM products WHERE id = $1", id)
 	if err != nil {
 		return err
 	}

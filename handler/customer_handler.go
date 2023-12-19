@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"api/model"
+	"api/entity"
 	"api/service"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 type CustomerHandler struct {
@@ -18,63 +18,54 @@ func NewCustomerHandler(customerService *service.CustomerService) *CustomerHandl
 	}
 }
 
-func (handler *CustomerHandler) GetCustomers(c *gin.Context) {
+func (handler *CustomerHandler) GetCustomers(c *fiber.Ctx) error {
 	customers, err := handler.customerService.GetCustomers()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve customers"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve customers"})
 	}
-	c.JSON(http.StatusOK, customers)
+	return c.Status(http.StatusOK).JSON(customers)
 }
 
-func (handler *CustomerHandler) GetCustomerByID(c *gin.Context) {
-	customerID := c.Param("id")
+func (handler *CustomerHandler) GetCustomerByID(c *fiber.Ctx) error {
+	customerID := c.Params("id")
 	customer, err := handler.customerService.GetCustomerByID(customerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve customer"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve customer"})
 	}
-	c.JSON(http.StatusOK, customer)
+	if customer.ID == "" {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "Customer not found"})
+	}
+	return c.Status(http.StatusOK).JSON(customer)
 }
 
-func (handler *CustomerHandler) CreateCustomer(c *gin.Context) {
-	var customer model.Customer
-	if err := c.ShouldBindJSON(&customer); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid customer data"})
-		return
+func (handler *CustomerHandler) CreateCustomer(c *fiber.Ctx) error {
+	var customer entity.Customer
+	if err := c.BodyParser(&customer); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid customer data"})
 	}
-
 	if err := handler.customerService.CreateCustomer(customer); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create customer"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create customer"})
 	}
-
-	c.Status(http.StatusCreated)
+	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "Customer created"})
 }
 
-func (handler *CustomerHandler) UpdateCustomer(c *gin.Context) {
-	customerID := c.Param("id")
-	var customer model.Customer
-	if err := c.ShouldBindJSON(&customer); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid customer data"})
-		return
+func (handler *CustomerHandler) UpdateCustomer(c *fiber.Ctx) error {
+	customerID := entity.UniqueIDFromValue(c.Params("id"))
+	var customer entity.Customer
+	if err := c.BodyParser(&customer); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid customer data"})
 	}
 	customer.ID = customerID
-
 	if err := handler.customerService.UpdateCustomer(customer); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update customer"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update customer"})
 	}
-
-	c.Status(http.StatusOK)
+	return c.Status(http.StatusOK).JSON(fiber.Map{"message": "Customer updated"})
 }
 
-func (handler *CustomerHandler) DeleteCustomer(c *gin.Context) {
-	customerID := c.Param("id")
+func (handler *CustomerHandler) DeleteCustomer(c *fiber.Ctx) error {
+	customerID := c.Params("id")
 	if err := handler.customerService.DeleteCustomer(customerID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete customer"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete customer"})
 	}
-
-	c.Status(http.StatusOK)
+	return c.Status(http.StatusOK).JSON(fiber.Map{"message": "Customer deleted"})
 }

@@ -8,14 +8,17 @@ import (
 	"api/service"
 	"log"
 
-	"github.com/gin-gonic/gin"
+	"github.com/goccy/go-json"
+	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
+	port := ":8080"
+
 	// Initialize the database
 	db, err := database.InitializeDB()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer db.Close()
 
@@ -35,13 +38,20 @@ func main() {
 	orderHandler := handler.NewOrderHandler(orderService)
 
 	// Initialize the Gin routes
-	r := gin.Default()
+	app := fiber.New(fiber.Config{
+		Immutable:   true,
+		JSONEncoder: json.Marshal,
+		JSONDecoder: json.Unmarshal,
+	})
+	app.Static("/", "./public")
 
 	// Define the API routes
-	routes.SetupProductRoutes(r, productHandler)
-	routes.SetupCustomerRoutes(r, customerHandler)
-	routes.SetupOrderRoutes(r, orderHandler)
+	routes.SetupProductRoutes(app, productHandler)
+	routes.SetupCustomerRoutes(app, customerHandler)
+	routes.SetupOrderRoutes(app, orderHandler)
 
 	// Start the HTTP server
-	r.Run(":8080")
+	if err := app.Listen(port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"api/model"
+	"api/entity"
 	"api/service"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 type OrderHandler struct {
@@ -18,72 +18,55 @@ func NewOrderHandler(orderService service.OrderService) *OrderHandler {
 	}
 }
 
-func (handler *OrderHandler) GetOrders(c *gin.Context) {
+func (handler *OrderHandler) GetOrders(c *fiber.Ctx) error {
 	orders, err := handler.orderService.GetOrders()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	c.JSON(http.StatusOK, orders)
+	return c.Status(http.StatusOK).JSON(orders)
 }
 
-func (handler *OrderHandler) GetOrderByID(c *gin.Context) {
-	orderID := c.Param("id")
-
+func (handler *OrderHandler) GetOrderByID(c *fiber.Ctx) error {
+	orderID := c.Params("id")
 	order, err := handler.orderService.GetOrderByID(orderID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	c.JSON(http.StatusOK, order)
+	return c.Status(http.StatusOK).JSON(order)
 }
 
-func (handler *OrderHandler) CreateOrder(c *gin.Context) {
-	var order model.Order
-	if err := c.ShouldBindJSON(&order); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+func (handler *OrderHandler) CreateOrder(c *fiber.Ctx) error {
+	var order entity.Order
+	if err := c.BodyParser(&order); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	err := handler.orderService.CreateOrder(order)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	c.JSON(http.StatusCreated, gin.H{"message": "Order created"})
+	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "Order created"})
 }
 
-func (handler *OrderHandler) UpdateOrder(c *gin.Context) {
-	orderID := c.Param("id")
-
-	var order model.Order
-	if err := c.ShouldBindJSON(&order); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+func (handler *OrderHandler) UpdateOrder(c *fiber.Ctx) error {
+	orderID := entity.UniqueIDFromValue(c.Params("id"))
+	var order entity.Order
+	if err := c.BodyParser(&order); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
-
 	order.ID = orderID
-
 	err := handler.orderService.UpdateOrder(order)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Order updated"})
+	return c.Status(http.StatusOK).JSON(fiber.Map{"message": "Order updated"})
 }
 
-func (handler *OrderHandler) DeleteOrder(c *gin.Context) {
-	orderID := c.Param("id")
-
+func (handler *OrderHandler) DeleteOrder(c *fiber.Ctx) error {
+	orderID := c.Params("id")
 	err := handler.orderService.DeleteOrder(orderID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Order deleted"})
+	return c.Status(http.StatusOK).JSON(fiber.Map{"message": "Order deleted"})
 }

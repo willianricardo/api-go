@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"api/model"
+	"api/entity"
 	"api/service"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 type ProductHandler struct {
@@ -18,63 +18,54 @@ func NewProductHandler(productService *service.ProductService) *ProductHandler {
 	}
 }
 
-func (handler *ProductHandler) GetProducts(c *gin.Context) {
+func (handler *ProductHandler) GetProducts(c *fiber.Ctx) error {
 	products, err := handler.productService.GetProducts()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve products"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve products"})
 	}
-	c.JSON(http.StatusOK, products)
+	return c.Status(http.StatusOK).JSON(products)
 }
 
-func (handler *ProductHandler) GetProductByID(c *gin.Context) {
-	productID := c.Param("id")
+func (handler *ProductHandler) GetProductByID(c *fiber.Ctx) error {
+	productID := c.Params("id")
 	product, err := handler.productService.GetProductByID(productID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve product"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to retrieve product"})
 	}
-	c.JSON(http.StatusOK, product)
+	if product.ID == "" {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{"error": "Product not found"})
+	}
+	return c.Status(http.StatusOK).JSON(product)
 }
 
-func (handler *ProductHandler) CreateProduct(c *gin.Context) {
-	var product model.Product
-	if err := c.ShouldBindJSON(&product); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product data"})
-		return
+func (handler *ProductHandler) CreateProduct(c *fiber.Ctx) error {
+	var product entity.Product
+	if err := c.BodyParser(&product); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid product data"})
 	}
-
 	if err := handler.productService.CreateProduct(product); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create product"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create product"})
 	}
-
-	c.Status(http.StatusCreated)
+	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "Product created"})
 }
 
-func (handler *ProductHandler) UpdateProduct(c *gin.Context) {
-	productID := c.Param("id")
-	var product model.Product
-	if err := c.ShouldBindJSON(&product); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid product data"})
-		return
+func (handler *ProductHandler) UpdateProduct(c *fiber.Ctx) error {
+	productID := entity.UniqueIDFromValue(c.Params("id"))
+	var product entity.Product
+	if err := c.BodyParser(&product); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid product data"})
 	}
 	product.ID = productID
-
 	if err := handler.productService.UpdateProduct(product); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update product"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update product"})
 	}
-
-	c.Status(http.StatusOK)
+	return c.Status(http.StatusOK).JSON(fiber.Map{"message": "Product updated"})
 }
 
-func (handler *ProductHandler) DeleteProduct(c *gin.Context) {
-	productID := c.Param("id")
+func (handler *ProductHandler) DeleteProduct(c *fiber.Ctx) error {
+	productID := c.Params("id")
 	if err := handler.productService.DeleteProduct(productID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete product"})
-		return
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete product"})
 	}
-
-	c.Status(http.StatusOK)
+	return c.Status(http.StatusOK).JSON(fiber.Map{"message": "Product deleted"})
 }
