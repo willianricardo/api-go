@@ -129,14 +129,12 @@ func (repository *OrderRepository) CreateOrder(order entity.Order) error {
 		return err
 	}
 
-	// Insert order
 	_, err = tx.Exec("INSERT INTO orders (id, customer_id, order_date) VALUES ($1, $2, $3)", order.ID, order.CustomerID, order.OrderDate)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Insert order items
 	for _, orderItem := range order.OrderItems {
 		_, err = tx.Exec("INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5)", orderItem.ID, order.ID, orderItem.ProductID, orderItem.Quantity, orderItem.Price)
 		if err != nil {
@@ -159,21 +157,18 @@ func (repository *OrderRepository) UpdateOrder(order entity.Order) error {
 		return err
 	}
 
-	// Update order
 	_, err = tx.Exec("UPDATE orders SET customer_id = $1, order_date = $2 WHERE id = $3", order.CustomerID, order.OrderDate, order.ID)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Delete existing order items
 	_, err = tx.Exec("DELETE FROM order_items WHERE order_id = $1", order.ID)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Insert updated order items
 	for _, orderItem := range order.OrderItems {
 		_, err = tx.Exec("INSERT INTO order_items (id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5)", orderItem.ID, order.ID, orderItem.ProductID, orderItem.Quantity, orderItem.Price)
 		if err != nil {
@@ -196,14 +191,12 @@ func (repository *OrderRepository) DeleteOrder(orderID string) error {
 		return err
 	}
 
-	// Delete order items
 	_, err = tx.Exec("DELETE FROM order_items WHERE order_id = $1", orderID)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// Delete order
 	_, err = tx.Exec("DELETE FROM orders WHERE id = $1", orderID)
 	if err != nil {
 		tx.Rollback()
