@@ -3,7 +3,7 @@ package main
 import (
 	"api/database"
 	"api/handler"
-	"api/repository"
+	repository "api/repository/postgres"
 	"api/routes"
 	"api/service"
 	"log"
@@ -21,9 +21,9 @@ func main() {
 	}
 	defer db.Close()
 
-	productRepository := repository.NewProductRepository(db)
-	customerRepository := repository.NewCustomerRepository(db)
-	orderRepository := repository.NewOrderRepository(db)
+	productRepository := repository.NewProductPostgresRepository(db)
+	customerRepository := repository.NewCustomerPostgresRepository(db)
+	orderRepository := repository.NewOrderPostgresRepository(db)
 
 	productService := service.NewProductService(productRepository)
 	customerService := service.NewCustomerService(customerRepository)

@@ -6,10 +6,10 @@ import (
 )
 
 type CustomerService struct {
-	customerRepository *repository.CustomerRepository
+	customerRepository repository.CustomerRepository
 }
 
-func NewCustomerService(customerRepository *repository.CustomerRepository) *CustomerService {
+func NewCustomerService(customerRepository repository.CustomerRepository) *CustomerService {
 	return &CustomerService{
 		customerRepository: customerRepository,
 	}
@@ -23,11 +23,11 @@ func (service *CustomerService) GetCustomerByID(id string) (entity.Customer, err
 	return service.customerRepository.GetCustomerByID(id)
 }
 
-func (service *CustomerService) CreateCustomer(customer entity.Customer) error {
+func (service *CustomerService) CreateCustomer(customer *entity.Customer) error {
 	return service.customerRepository.CreateCustomer(customer)
 }
 
-func (service *CustomerService) UpdateCustomer(customer entity.Customer) error {
+func (service *CustomerService) UpdateCustomer(customer *entity.Customer) error {
 	return service.customerRepository.UpdateCustomer(customer)
 }
 

@@ -1,78 +1,11 @@
 package repository
 
-import (
-	"api/entity"
-	"database/sql"
-)
+import "api/entity"
 
-type CustomerRepository struct {
-	db *sql.DB
-}
-
-func NewCustomerRepository(db *sql.DB) *CustomerRepository {
-	return &CustomerRepository{
-		db: db,
-	}
-}
-
-func (repository *CustomerRepository) GetCustomers() ([]entity.Customer, error) {
-	customers := make([]entity.Customer, 0)
-	rows, err := repository.db.Query("SELECT id, name FROM customers")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var customer entity.Customer
-		err := rows.Scan(&customer.ID, &customer.Name)
-		if err != nil {
-			return nil, err
-		}
-		customers = append(customers, customer)
-	}
-
-	return customers, nil
-}
-
-func (repository *CustomerRepository) GetCustomerByID(id string) (entity.Customer, error) {
-	rows, err := repository.db.Query("SELECT id, name FROM customers WHERE id = $1", id)
-	if err != nil {
-		return entity.Customer{}, err
-	}
-
-	if rows.Next() {
-		var customer entity.Customer
-		err := rows.Scan(&customer.ID, &customer.Name)
-		if err != nil {
-			return entity.Customer{}, err
-		}
-		return customer, nil
-	}
-
-	return entity.Customer{}, nil
-}
-
-func (repository *CustomerRepository) CreateCustomer(customer entity.Customer) error {
-	_, err := repository.db.Exec("INSERT INTO customers (id, name) VALUES ($1, $2)", customer.ID, customer.Name)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (repository *CustomerRepository) UpdateCustomer(customer entity.Customer) error {
-	_, err := repository.db.Exec("UPDATE customers SET name = $1 WHERE id = $2", customer.Name, customer.ID)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (repository *CustomerRepository) DeleteCustomer(id string) error {
-	_, err := repository.db.Exec("DELETE FROM customers WHERE id = $1", id)
-	if err != nil {
-		return err
-	}
-	return nil
+type CustomerRepository interface {
+	GetCustomers() ([]entity.Customer, error)
+	GetCustomerByID(id string) (entity.Customer, error)
+	CreateCustomer(Customer *entity.Customer) error
+	UpdateCustomer(Customer *entity.Customer) error
+	DeleteCustomer(id string) error
 }

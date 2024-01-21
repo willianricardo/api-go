@@ -17,6 +17,6 @@ func UniqueIDFromValue(value string) UniqueID {
 	return UniqueID(id.String())
 }
 
-func StringFromUniqueID(value UniqueID) string {
+func ValueFromUniqueID(value UniqueID) string {
 	return string(value)
 }

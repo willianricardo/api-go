@@ -38,10 +38,20 @@ func (handler *ProductHandler) GetProductByID(c *fiber.Ctx) error {
 	return c.Status(http.StatusOK).JSON(product)
 }
 
+type CreateProductRequest struct {
+	ID    string  `json:"id"`
+	Name  string  `json:"name"`
+	Price float64 `json:"price"`
+}
+
 func (handler *ProductHandler) CreateProduct(c *fiber.Ctx) error {
-	var product entity.Product
-	if err := c.BodyParser(&product); err != nil {
+	var request CreateProductRequest
+	if err := c.BodyParser(&request); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid product data"})
+	}
+	product, err := entity.NewProduct(request.ID, request.Name, request.Price)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 	if err := handler.productService.CreateProduct(product); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to create product"})
@@ -49,13 +59,22 @@ func (handler *ProductHandler) CreateProduct(c *fiber.Ctx) error {
 	return c.Status(http.StatusCreated).JSON(fiber.Map{"message": "Product created"})
 }
 
+type UpdateProductRequest struct {
+	Name  string  `json:"name"`
+	Price float64 `json:"price"`
+}
+
 func (handler *ProductHandler) UpdateProduct(c *fiber.Ctx) error {
-	productID := entity.UniqueIDFromValue(c.Params("id"))
-	var product entity.Product
-	if err := c.BodyParser(&product); err != nil {
+	productID := c.Params("id")
+
+	var request UpdateProductRequest
+	if err := c.BodyParser(&request); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": "Invalid product data"})
 	}
-	product.ID = productID
+	product, err := entity.NewProduct(productID, request.Name, request.Price)
+	if err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
 	if err := handler.productService.UpdateProduct(product); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update product"})
 	}
